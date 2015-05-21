@@ -5,8 +5,8 @@
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <pthread.h>
 
-#define PORT 4004
 #define MAX_CONNECTIONS 10
 
 void startConnection (int sockfd);
@@ -16,12 +16,20 @@ int main(int argc, char *argv[])
 	int sockfd, newsockfd;
 	socklen_t clilen;
 	struct sockaddr_in serv_addr, cli_addr;
+	int port;	
+
+	if (argc < 2)
+	{
+		fprintf(stderr,"usage %s #port\n", argv[0]);
+		return(0);
+	}
 	
+	port = atoi(argv[1]);
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
         printf("ERROR opening socket");
 	
 	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(PORT);
+	serv_addr.sin_port = htons(port);
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
 	bzero(&(serv_addr.sin_zero), 8);     
     
@@ -63,11 +71,12 @@ void startConnection (int newsockfd)
 	char buffer[256];
 	bzero(buffer, 256);
 	printf("New client!\n");
-	while (1) // TODO: fix later
+	while (strcmp(buffer, "/logout\n"))
 	{
 		n = read(newsockfd, buffer, 256);
 		if (n < 0) 
 			printf("ERROR reading from socket");
-		printf("Here is the message: %s\n", buffer);
+		printf("Here is the message: %s", buffer);
 	}
+	
 }
