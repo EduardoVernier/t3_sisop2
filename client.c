@@ -14,6 +14,7 @@ pthread_t sender;
 
 int connectToServer(int argc, char *argv[]);
 void *sendMessages(void *arg);
+void *receiveMessages(void *arg);
 
 int main(int argc, char *argv[])
 {
@@ -21,17 +22,11 @@ int main(int argc, char *argv[])
 		return 0;
 		
 	pthread_create(&sender, NULL, sendMessages, NULL);
-
+	pthread_create(&receiver, NULL, receiveMessages, NULL);
+	
 	pthread_join(sender, NULL);
-
-	/* read from the socket */ 
-	// will need to be done by another thread
-	// bzero(buffer,256);
-	//n = read(sockfd, buffer, 256);
-	//if (n < 0) 
-	//	printf("ERROR reading from socket\n");
-	//printf("%s\n",buffer);
-
+	pthread_join(receiver, NULL);
+	
 	close(sockfd);
 	return 0;
 }
@@ -87,3 +82,19 @@ int connectToServer(int argc, char *argv[])
 			printf("ERROR writing to socket\n");	
 	}
  }
+ 
+ void *receiveMessages(void *arg)
+ {
+ 	char buffer[256];
+	int n;
+ 	while (strcmp(buffer, "/disconnect\n") != 0)
+	{
+		bzero(buffer,256);
+		n = read(sockfd, buffer, 256);
+		if (n < 0) 
+			printf("ERROR reading from socket\n");
+		printf("%s\n", buffer);
+ 	}
+ }
+ 
+ 

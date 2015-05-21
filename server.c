@@ -67,16 +67,20 @@ int main(int argc, char *argv[])
 
 void startConnection (int newsockfd)
 {
-	int n;
+
 	char buffer[256];
 	bzero(buffer, 256);
 	printf("New client!\n");
 	while (strcmp(buffer, "/logout\n"))
 	{
+		int n;
 		n = read(newsockfd, buffer, 256);
 		if (n < 0) 
 			printf("ERROR reading from socket");
 		printf("Here is the message: %s", buffer);
 	}
-	
+	if (write(newsockfd, "/disconnect\n", 12) < 0)
+		printf("Error disconnecting client");
+
+		
 }
