@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 {
 	if (connectToServer(argc, argv) == 1)
 		return 0;
-		
+	
 	pthread_create(&sender, NULL, sendMessages, NULL);
 	pthread_create(&receiver, NULL, receiveMessages, NULL);
 	

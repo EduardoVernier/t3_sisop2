@@ -6,11 +6,13 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include "message_list.c"
 
 #define MAX_CONNECTIONS 10
 
 int sockfd, newsockfd;
 pthread_t runner;
+message_list* messageList;
 
 void *newClientConnection (void *arg);
 int setUpSocket(int argc, char *argv[]);
@@ -20,7 +22,8 @@ int main(int argc, char *argv[])
 	setUpSocket(argc, argv);
 	struct sockaddr_in cli_addr;
 	
-	
+	messageList = newMessageList();
+
 	socklen_t clilen;
 	clilen = sizeof(struct sockaddr_in);
 	while (newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen))
@@ -37,9 +40,6 @@ int main(int argc, char *argv[])
             return 1;
         }
         
-			//startConnection (); //new thread for each conection
-
-
 	}
 	
 	/* read from the socket */
@@ -76,7 +76,7 @@ int setUpSocket(int argc, char *argv[])
 	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
 	{
 		printf("ERROR on binding");
-		return 1;	
+		return 1;
 	}
 		
 	listen(sockfd, MAX_CONNECTIONS);
@@ -96,6 +96,12 @@ void *newClientConnection (void *arg)
 		if (n < 0) 
 			printf("ERROR reading from socket");
 		printf("Here is the message: %s", buffer);
+		
+		// provisory - room will be sent with every message (parsing needed)
+		char _room [10] = "futebol";
+		message* newM = newMessage(buffer, _room);
+		addNewMessage(messageList, newM);
+		printMessages(messageList);
 	}
 	if (write(newsockfd, "/disconnect\n", 12) < 0)
 		printf("Error disconnecting client");
