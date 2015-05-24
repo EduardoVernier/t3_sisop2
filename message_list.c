@@ -10,11 +10,13 @@ message_list* newMessageList()
 	return ml;
 }
 
-message* newMessage(char *_text, char *_room)
+message* newMessage(char *_text, char *_room, char *_username, int _id)
 {
 	message* m = (message*) malloc(sizeof(message));
 	m->text = strdup(_text);
 	m->room = strdup(_room);
+	m->username = strdup(_username);
+	m->id = _id;
 	return m;
 }
 

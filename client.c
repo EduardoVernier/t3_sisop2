@@ -16,6 +16,10 @@ int connectToServer(int argc, char *argv[]);
 void *sendMessages(void *arg);
 void *receiveMessages(void *arg);
 
+struct hostent *server;
+int port;
+char serverName[100];
+
 int main(int argc, char *argv[])
 {
 	if (connectToServer(argc, argv) == 1)
@@ -38,11 +42,13 @@ int connectToServer(int argc, char *argv[])
 		return(1);
 	}
 	struct sockaddr_in serv_addr;
-	struct hostent *server;
-	int port;
 
 	port = atoi(argv[2]);
 	server = gethostbyname(argv[1]);
+
+	bzero(serverName, 100);
+	strcpy(serverName, argv[1]);
+
 	if (server == NULL) {
 		fprintf(stderr,"ERROR, no such host\n");
 		return(1);
@@ -68,10 +74,11 @@ int connectToServer(int argc, char *argv[])
 }
  void *sendMessages(void *arg)
  {
+    int logout = 0;
  	char buffer[256];
- 	while (strcmp(buffer, "/logout\n") != 0)
+ 	while (!logout)
 	{
-		printf("Enter the message: ");
+		printf("[ENTER to Send]: ");
 		bzero(buffer, 256);
 		fgets(buffer, 256, stdin);
 
@@ -80,22 +87,25 @@ int connectToServer(int argc, char *argv[])
 		n = write(sockfd, buffer, strlen(buffer));
 		if (n < 0)
 			printf("ERROR writing to socket\n");
+
+        if(strcmp(buffer, "/logout\n") == 0)
+            logout = 1;
+        else if(strcmp(buffer, "/name\n") == 0){
+        	printf("[New NAME]: ");
+            bzero(buffer, 256);
+            fgets(buffer, 256, stdin);
+
+            n = write(sockfd, buffer, strlen(buffer));
+            if (n < 0) printf("ERROR writing to socket\n");
+        }
+
         bzero(buffer, 256);
 	}
  }
 
  void *receiveMessages(void *arg)
  {
- 	char buffer[256];
-	int n;
- 	while (strcmp(buffer, "/disconnect\n") != 0)
-	{
-		bzero(buffer,256);
-		n = read(sockfd, buffer, 256);
-		if (n < 0)
-			printf("ERROR reading from socket\n");
-		printf("%s\n", buffer);
- 	}
+    char sysString[256];
+    sprintf(sysString, "xterm -e ./screen %s %d %d", serverName, port, sockfd);
+    system(sysString);
  }
-
-

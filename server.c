@@ -18,6 +18,7 @@ sem_t semaphore;
 
 void *newClientConnection (void *arg);
 int setUpSocket(int argc, char *argv[]);
+void *newMessageDeliverer(void *arg);
 
 int main(int argc, char *argv[])
 {
@@ -35,10 +36,17 @@ int main(int argc, char *argv[])
 		puts("Connection accepted");
 
         pthread_t newClientThread;
+        pthread_t newClientMessageDeliverer;
         int *newSock = malloc(sizeof(int));
         *newSock = newsockfd;
 
 		if( pthread_create( &newClientThread , NULL ,  newClientConnection , (void*)newSock) < 0)
+        {
+            perror("could not create thread");
+            return 1;
+        }
+
+        if( pthread_create( &newClientMessageDeliverer , NULL ,  newMessageDeliverer , (void*)newSock) < 0)
         {
             perror("could not create thread");
             return 1;
@@ -86,33 +94,97 @@ int setUpSocket(int argc, char *argv[])
 	listen(sockfd, MAX_CONNECTIONS);
 }
 
+void *newMessageDeliverer(void *arg){
+    int newsockfd = *(int*) arg;
+
+    message* clientLastMessage;
+
+    while(messageList->end == NULL);
+
+    clientLastMessage = messageList->end;
+
+	while(!(strcmp(clientLastMessage->text, "/logout\n") == 0 && clientLastMessage->id == newsockfd))
+	{
+        if(clientLastMessage == NULL){
+            continue;
+        }else{
+            int n;
+            char msgToDeliver[256];
+            sprintf(msgToDeliver, "%s%s%s%s", "[", clientLastMessage->username,"]: ", clientLastMessage->text);
+
+            n = write(newsockfd, msgToDeliver, strlen(msgToDeliver));
+            if (n < 0)
+                printf("ERROR writing to socket\n");
+
+            while(clientLastMessage->next == NULL);
+            clientLastMessage = clientLastMessage->next;
+        }
+    }
+}
+
 void *newClientConnection (void *arg)
 {
+    char userName[256];
+    strcpy(userName, "user");
 	int newsockfd = *(int*) arg;
 
 	char buffer[256];
 	bzero(buffer, 256);
 	printf("New client!\n");
-	while (strcmp(buffer, "/logout\n"))
+
+	int logout = 0;
+	int specialCmd = 0;
+	while (!logout)
 	{
 		int n;
 		n = read(newsockfd, buffer, 256);
 		if(n < 0)
 			printf("ERROR reading from socket");
 
-        sem_wait(&semaphore);
+        //special commands
+        if(strcmp(buffer, "/logout\n") == 0){
+            logout = 1;
+            specialCmd = 1;
+        } else if(strcmp(buffer, "/join\n") == 0){
+            n = read(newsockfd, buffer, 256);
+            if(n < 0) printf("ERROR reading from socket");
 
-		printf("Here is the message: %s", buffer);
-		bzero(buffer, 256);
+            //logar usuario na sala == trocar ponteiro q ele usa para receber mensagens (na função New Message Deliverer)
+            specialCmd = 1;
+        } else if(strcmp(buffer, "/leave\n") == 0){
 
-		// provisory - room will be sent with every message (parsing needed)
-		char _room [10] = "futebol";
-		message* newM = newMessage(buffer, _room);
-		addNewMessage(messageList, newM);
-		//printMessages(messageList);
+            //anular o ponteiro do usuário para receber mensagens
+            specialCmd = 1;
+        } else if(strcmp(buffer, "/name\n") == 0){
+            n = read(newsockfd, buffer, 256);
+            if(n < 0) printf("ERROR reading from socket");
 
-		sem_post(&semaphore);
+            int i;
+            for(i=0; i<strlen(buffer); i++)
+                if(buffer[i] == '\n')
+                    buffer[i] = '\0';
+
+            strcpy(userName, buffer);
+
+            specialCmd = 1;
+        } else if(strcmp(buffer, "/create\n") == 0){
+            specialCmd = 1;
+        }
+        //end of special commands
+
+        printf("%10s's msg: %s", userName, buffer);
+        if(!specialCmd){
+            // provisory - room will be sent with every message (parsing needed)
+            char _room [10] = "futebol";
+            message* newM = newMessage(buffer, _room, userName, newsockfd);
+            addNewMessage(messageList, newM);
+            printMessages(messageList);
+        }else{
+            specialCmd = 0;
+        }
+
+        bzero(buffer, 256); //eliminates any vestigious in buffer to receive next message
 	}
-	if (write(newsockfd, "/disconnect\n", 12) < 0)
+	if (write(newsockfd, "/disconnect\n", strlen("/disconnect\n")) < 0)
 		printf("Error disconnecting client");
 }
