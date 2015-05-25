@@ -20,8 +20,7 @@ struct hostent *server;
 int port;
 char serverName[100];
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]){
 	if(connectToServer(argc, argv) == 1) return 0;
 
 	pthread_create(&sender, NULL, sendMessages, NULL);
@@ -34,9 +33,8 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-int connectToServer(int argc, char *argv[])
-{
-	if (argc < 3) {
+int connectToServer(int argc, char *argv[]){
+	if (argc < 3){
 		fprintf(stderr,"usage %s hostname #port\n", argv[0]);
 		return(1);
 	}
@@ -48,13 +46,12 @@ int connectToServer(int argc, char *argv[])
 	bzero(serverName, 100);
 	strcpy(serverName, argv[1]);
 
-	if (server == NULL) {
+	if (server == NULL){
 		fprintf(stderr,"ERROR, no such host\n");
 		return(1);
 	}
 
-	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-	{
+	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1){
 		printf("ERROR opening socket\n");
 		return 1;
 	}
@@ -64,15 +61,14 @@ int connectToServer(int argc, char *argv[])
 	serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
 	bzero(&(serv_addr.sin_zero), 8);
 
-	if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)
-	{
+	if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0){
 		printf("ERROR connecting\n");
 		return 1;
 	}
 	return 0;
 }
- void *sendMessages(void *arg)
- {
+
+void *sendMessages(void *arg){
     int n;
     int logout = 0;
  	char buffer[256];
@@ -110,11 +106,13 @@ int connectToServer(int argc, char *argv[])
 
         system("clear");
 	}
+	pthread_exit(0);
  }
 
- void *receiveMessages(void *arg)
- {
+void *receiveMessages(void *arg){
     char sysString[256];
     sprintf(sysString, "xterm -e ./screen %s %d %d", serverName, port, sockfd);
     system(sysString);
+
+    pthread_exit(0);
  }

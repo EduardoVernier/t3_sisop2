@@ -37,8 +37,7 @@ char* colorByName(char firstLetter){
     }
 }
 
- int main(int argc, char *argv[])
- {
+int main(int argc, char *argv[]){
 	struct sockaddr_in serv_addr;
 	struct hostent *server;
 	int port;
@@ -71,12 +70,16 @@ char* colorByName(char firstLetter){
     printf(KMAG "  /" KBLU "create " KWHT ": to create a new room (joins automatically)\n" RESET);
     printf(KMAG "  /" KBLU "name   " KWHT ": change username\n\n" RESET);
 
+    bzero(buffer,256);
+    n = read(sockfd, buffer, 256);
+    if (n < 0) printf("ERROR reading from socket\n");
+    printf(KYEL "ROOM: %s\n" KWHT, buffer);
+
  	while (!logout)
 	{
         bzero(buffer,256);
         n = read(sockfd, buffer, 256);
-        if (n < 0)
-            printf("ERROR reading from socket\n");
+        if (n < 0) printf("ERROR reading from socket\n");
         printf("%s%s" RESET, colorByName(buffer[1]), buffer);
 
         if(strcmp(buffer, "/disconnect\n") == 0)
