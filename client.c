@@ -22,8 +22,7 @@ char serverName[100];
 
 int main(int argc, char *argv[])
 {
-	if (connectToServer(argc, argv) == 1)
-		return 0;
+	if(connectToServer(argc, argv) == 1) return 0;
 
 	pthread_create(&sender, NULL, sendMessages, NULL);
 	pthread_create(&receiver, NULL, receiveMessages, NULL);
@@ -74,19 +73,27 @@ int connectToServer(int argc, char *argv[])
 }
  void *sendMessages(void *arg)
  {
+    int n;
     int logout = 0;
  	char buffer[256];
+
+    system("clear");
+
+    n = write(sockfd, "/name\n", strlen("/name\n"));
+    if (n < 0) printf("ERROR writing to socket\n");
+    printf("[New NAME]: ");
+    bzero(buffer, 256);
+    fgets(buffer, 256, stdin);
+    n = write(sockfd, buffer, strlen(buffer));
+
  	while (!logout)
 	{
 		printf("[ENTER to Send]: ");
 		bzero(buffer, 256);
 		fgets(buffer, 256, stdin);
 
-		/* write in the socket */
-		int n;
 		n = write(sockfd, buffer, strlen(buffer));
-		if (n < 0)
-			printf("ERROR writing to socket\n");
+		if (n < 0) printf("ERROR writing to socket\n");
 
         if(strcmp(buffer, "/logout\n") == 0)
             logout = 1;
@@ -100,6 +107,8 @@ int connectToServer(int argc, char *argv[])
         }
 
         bzero(buffer, 256);
+
+        system("clear");
 	}
  }
 

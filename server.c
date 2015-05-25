@@ -13,7 +13,7 @@
 
 int sockfd, newsockfd;
 pthread_t runner;
-message_list* messageList;
+message_list* messageList = NULL;
 sem_t semaphore;
 
 void *newClientConnection (void *arg);
@@ -31,8 +31,9 @@ int main(int argc, char *argv[])
 
 	socklen_t clilen;
 	clilen = sizeof(struct sockaddr_in);
-	while (newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen))
+	while(1)
 	{
+        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 		puts("Connection accepted");
 
         pthread_t newClientThread;
@@ -40,25 +41,16 @@ int main(int argc, char *argv[])
         int *newSock = malloc(sizeof(int));
         *newSock = newsockfd;
 
-		if( pthread_create( &newClientThread , NULL ,  newClientConnection , (void*)newSock) < 0)
-        {
+		if(pthread_create(&newClientThread , NULL ,  newClientConnection , (void*)newSock) < 0){
             perror("could not create thread");
             return 1;
         }
 
-        if( pthread_create( &newClientMessageDeliverer , NULL ,  newMessageDeliverer , (void*)newSock) < 0)
-        {
+        if(pthread_create(&newClientMessageDeliverer , NULL ,  newMessageDeliverer , (void*)newSock) < 0){
             perror("could not create thread");
             return 1;
         }
-
 	}
-
-	/* read from the socket */
-	/* write in the socket */
-	//n = write(newsockfd,"I got your message", 18);
-	//if (n < 0)
-	//	printf("ERROR writing to socket");
 
 	close(newsockfd);
 	close(sockfd);
@@ -96,8 +88,7 @@ int setUpSocket(int argc, char *argv[])
 
 void *newMessageDeliverer(void *arg){
     int newsockfd = *(int*) arg;
-
-    message* clientLastMessage;
+    message* clientLastMessage = NULL;
 
     while(messageList->end == NULL);
 
@@ -113,8 +104,7 @@ void *newMessageDeliverer(void *arg){
             sprintf(msgToDeliver, "%s%s%s%s", "[", clientLastMessage->username,"]: ", clientLastMessage->text);
 
             n = write(newsockfd, msgToDeliver, strlen(msgToDeliver));
-            if (n < 0)
-                printf("ERROR writing to socket\n");
+            if (n < 0) printf("ERROR writing to socket\n");
 
             while(clientLastMessage->next == NULL);
             clientLastMessage = clientLastMessage->next;
@@ -132,14 +122,17 @@ void *newClientConnection (void *arg)
 	bzero(buffer, 256);
 	printf("New client!\n");
 
-	int logout = 0;
-	int specialCmd = 0;
+    int n;
+	int logout;
+	int specialCmd;
 	while (!logout)
 	{
-		int n;
+        logout = 0;
+		specialCmd = 0;
 		n = read(newsockfd, buffer, 256);
-		if(n < 0)
-			printf("ERROR reading from socket");
+		if(n < 0) printf("ERROR reading from socket");
+
+        printf("\n...fez read...\n");
 
         //special commands
         if(strcmp(buffer, "/logout\n") == 0){
@@ -172,13 +165,14 @@ void *newClientConnection (void *arg)
         }
         //end of special commands
 
-        printf("%10s's msg: %s", userName, buffer);
+        printf("%s's MSG: %s", userName, buffer);
         if(!specialCmd){
             // provisory - room will be sent with every message (parsing needed)
-            char _room [10] = "futebol";
+            char _room [10] = "room";
             message* newM = newMessage(buffer, _room, userName, newsockfd);
             addNewMessage(messageList, newM);
             printMessages(messageList);
+            printf("\n...voltou do print...\n");
         }else{
             specialCmd = 0;
         }

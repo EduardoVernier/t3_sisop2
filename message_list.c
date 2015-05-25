@@ -22,12 +22,11 @@ message* newMessage(char *_text, char *_room, char *_username, int _id)
 
 void addNewMessage (message_list* ml, message* m)
 {
-	if (ml->start == NULL)
-	{
-		ml->start = ml->end = m;
+	if (ml->start == NULL){
+		ml->start = m;
+		ml->end = m;
 	}
-	else
-	{
+	else{
 		ml->end->next = m;
 		ml->end = m;
 	}
@@ -36,10 +35,10 @@ void addNewMessage (message_list* ml, message* m)
 void printMessages (message_list *ml)
 {
 	message *m = ml->start;
-	while (1)
-	{
+	do{
 		printf ("-> %s", m->text);
-		if (m->next == NULL) break;
-		else m = m->next;
-	}
+		m = m->next;
+	}while(m != NULL);
+
+	printf("\n...end print...\n");
 }
