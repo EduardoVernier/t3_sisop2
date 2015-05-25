@@ -7,15 +7,18 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include "message_list.c"
+#include "client_list.c"
 
 #define MAX_CONNECTIONS 10
 
 int sockfd, newsockfd;
 pthread_t runner;
 message_list* messageList;
+client_list* clientList;
 
 void *newClientConnection (void *arg);
 int setUpSocket(int argc, char *argv[]);
+void sendMessage(client_list *cl, message* m);
 
 int main(int argc, char *argv[])
 {
@@ -23,6 +26,7 @@ int main(int argc, char *argv[])
 	struct sockaddr_in cli_addr;
 	
 	messageList = newMessageList();
+	clientList = newClientList();
 
 	socklen_t clilen;
 	clilen = sizeof(struct sockaddr_in);
@@ -85,7 +89,8 @@ int setUpSocket(int argc, char *argv[])
 void *newClientConnection (void *arg)
 {
 	int newsockfd = *(int*) arg;
-	
+	client *c = newClient ("John", newsockfd);
+	addNewClient(clientList, c);
 	char buffer[256];
 	bzero(buffer, 256);
 	printf("New client!\n");
@@ -102,7 +107,21 @@ void *newClientConnection (void *arg)
 		message* newM = newMessage(buffer, _room);
 		addNewMessage(messageList, newM);
 		printMessages(messageList);
+		sendMessage(clientList, newM);
 	}
 	if (write(newsockfd, "/disconnect\n", 12) < 0)
 		printf("Error disconnecting client");
+}
+
+void sendMessage(client_list *cl, message* m)
+{
+	client *c = cl->start;
+	while (1)
+	{
+		if (c == NULL) break;
+		write(c->sock, m->text, strlen(m->text));
+		//printf("wrote> %s\n", m->text);
+		if (c->next == NULL) break;
+		c = c->next;
+	}
 }

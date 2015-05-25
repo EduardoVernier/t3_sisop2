@@ -36,7 +36,8 @@ void printMessages (message_list *ml)
 	message *m = ml->start;
 	while (1)
 	{
-		printf ("-> %s", m->text);
+		if (m == NULL) break;
+		printf ("%s", m->text);
 		if (m->next == NULL) break;
 		else m = m->next;
 	}
