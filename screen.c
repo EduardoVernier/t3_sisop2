@@ -18,25 +18,6 @@
 #define KWHT  "\x1B[37m"
 #define RESET "\033[0m"
 
-char* colorByName(char firstLetter){
-    firstLetter = toupper(firstLetter);
-    if(firstLetter >= 'A' && firstLetter <= 'D'){
-        return KRED;
-    }else if(firstLetter >= 'E' && firstLetter <= 'H'){
-        return KGRN;
-    }else if(firstLetter >= 'I' && firstLetter <= 'L'){
-        return KBLU;
-    }else if(firstLetter >= 'M' && firstLetter <= 'P'){
-        return KYEL;
-    }else if(firstLetter >= 'Q' && firstLetter <= 'T'){
-        return KMAG;
-    }else if(firstLetter >= 'U' && firstLetter <= 'Z'){
-        return KCYN;
-    }else{
-        return RESET;
-    }
-}
-
 int main(int argc, char *argv[]){
 	struct sockaddr_in serv_addr;
 	struct hostent *server;
@@ -65,22 +46,17 @@ int main(int argc, char *argv[]){
 
     printf(KRED "\nSpecial Commmands:\n" RESET);
     printf(KMAG "  /" KBLU "logout " KWHT ": to exit chat\n" RESET);
-    printf(KMAG "  /" KBLU "join   " KWHT ": for chossing a different chat room\n" RESET);
-    printf(KMAG "  /" KBLU "rooms  " KWHT ": list possible rooms to join\n" RESET);
-    printf(KMAG "  /" KBLU "create " KWHT ": to create a new room (joins automatically)\n" RESET);
-    printf(KMAG "  /" KBLU "name   " KWHT ": change username\n\n" RESET);
+    printf(KMAG "  /" KBLU "name   " KWHT ": change username\n" RESET);
+    printf(KMAG "  /" KBLU "join   " KWHT ": enter a different chat room\n");
+    printf(KMAG "   " KBLU "       " KWHT "  (creates a new one if it doesn't exist)\n\n" RESET);
 
-    bzero(buffer,256);
-    n = read(sockfd, buffer, 256);
-    if (n < 0) printf("ERROR reading from socket\n");
-    printf(KYEL "ROOM: %s\n" KWHT, buffer);
 
  	while (!logout)
 	{
         bzero(buffer,256);
         n = read(sockfd, buffer, 256);
         if (n < 0) printf("ERROR reading from socket\n");
-        printf("%s%s" RESET, colorByName(buffer[1]), buffer);
+        printf("%s" RESET, buffer);
 
         if(strcmp(buffer, "/disconnect\n") == 0)
             logout = 1;

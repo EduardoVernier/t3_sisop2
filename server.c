@@ -10,6 +10,7 @@
 #include "message_list.c"
 #include "client_list.c"
 
+#define KWHT  "\x1B[37m"
 
 #define MAX_CONNECTIONS 10
 
@@ -24,13 +25,41 @@ void *newClientConnection (void *arg);
 int setUpSocket(int argc, char *argv[]);
 void *newMessageDeliverer(void *arg);
 
+#define KNRM  "\x1B[0m"
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KYEL  "\x1B[33m"
+#define KBLU  "\x1B[34m"
+#define KMAG  "\x1B[35m"
+#define KCYN  "\x1B[36m"
+#define KWHT  "\x1B[37m"
+#define RESET "\033[0m"
+
+char* colorByName(char firstLetter){
+    firstLetter = toupper(firstLetter);
+    if(firstLetter >= 'A' && firstLetter <= 'D'){
+        return KRED;
+    }else if(firstLetter >= 'E' && firstLetter <= 'H'){
+        return KGRN;
+    }else if(firstLetter >= 'I' && firstLetter <= 'L'){
+        return KBLU;
+    }else if(firstLetter >= 'M' && firstLetter <= 'P'){
+        return KYEL;
+    }else if(firstLetter >= 'Q' && firstLetter <= 'T'){
+        return KMAG;
+    }else if(firstLetter >= 'U' && firstLetter <= 'Z'){
+        return KCYN;
+    }else{
+        return RESET;
+    }
+}
+
 int main(int argc, char *argv[]){
 	setUpSocket(argc, argv);
 	struct sockaddr_in cli_addr;
 
 	messageList = newMessageList();
 	clientList = newClientList();
-	//root = createRoom("Global", newMessageList(), NULL);
 
     sem_init(&semaphore, 0, 1);
 
@@ -44,17 +73,9 @@ int main(int argc, char *argv[]){
 		puts("Connection accepted");
 
         pthread_t *newClientThread = malloc(sizeof(pthread_t));
-        pthread_t *newClientMessageDeliverer = malloc(sizeof(pthread_t));
-        //int *newSock = malloc(sizeof(int));
-        //*newSock = newsockfd;
 
 		if(pthread_create(newClientThread, NULL, newClientConnection, (void*)newSock) < 0){
             perror("could not create thread for client");
-            return 1;
-        }
-
-        if(pthread_create(newClientMessageDeliverer, NULL, newMessageDeliverer, (void*)newSock) < 0){
-            perror("could not create thread for deliverer");
             return 1;
         }
 	}
@@ -92,46 +113,21 @@ int setUpSocket(int argc, char *argv[]){
 	return 0;
 }
 
-void *newMessageDeliverer(void *arg){
-/*    int newsockfd = *(int*) arg;
-
-    message* clientLastMessage;
-
-    while(messageList->end == NULL);
-
-    clientLastMessage = messageList->end;
-
-	while(!(strcmp(clientLastMessage->text, "/logout\n") == 0 && clientLastMessage->id == newsockfd))
-	{
-        if(clientLastMessage == NULL){
-            continue;
-        }else{
-            int n;
-            char msgToDeliver[256];
-            sprintf(msgToDeliver, "%s%s%s{%s} %s\n", "[", clientLastMessage->username,"]: ", clientLastMessage->room, clientLastMessage->text);
-            n = write(newsockfd, msgToDeliver, strlen(msgToDeliver));
-           if (n < 0)
-                printf("ERROR writing to socket\n");
-            while(clientLastMessage->next == NULL);
-            clientLastMessage = clientLastMessage->next;
-        }
-    }
-*/
-}
-
 void sendMessage(client_list *cl, message* m)
 {
 	client *c = cl->start;
-	while (1)
+	while(1)
 	{
 		if (c == NULL) break;
 		if (strcmp(c->room, m->room)==0)
 		{
 			char msgToDeliver[256];
-			sprintf(msgToDeliver, "%s%s%s{%s} %s\n", "[", m->username,"]: ", m->room, m->text);
+			char msgColor[3];
+			strcpy(msgColor, colorByName(m->username[0]));
+			sprintf(msgToDeliver, KWHT "#%-10s %s@%-10s" KWHT " : %s%s",
+                    m->room, msgColor, m->username, msgColor, m->text);
 			write(c->sock, msgToDeliver, strlen(msgToDeliver));
 		}
-		//printf("wrote> %s\n", m->text);
 		if (c->next == NULL) break;
 		c = c->next;
 	}
@@ -146,12 +142,8 @@ void *newClientConnection (void *arg){
 	char buffer[256];
 	bzero(buffer, 256);
 	printf("New client!\n");
-	
 
-
-    int i = 0, n = 0, logout = 0, create = 0, join = 0, specialCmd = 0;
-	//room* myRoom = root;
-	//room* test = NULL;
+    int i = 0, n = 0, logout = 0, specialCmd = 0;
 
 	while (!logout)
 	{
@@ -183,16 +175,12 @@ void *newClientConnection (void *arg){
                     buffer[i] = '\0';
 
             strcpy(userName, buffer);
-            client *c = newClient (userName, newsockfd, room);
+            client *c = newClient(userName, newsockfd, room);
 			addNewClient(clientList, c);
             specialCmd = 1;
         }
-        //else if(strcmp(buffer, "/create\n") == 0){
-        //    create = 1;
-        //}
-        //end of special commands
 
-        printf(" -> %s's MSG: %s ", userName, buffer);
+        printf(" -> %s: %s ", userName, buffer);
         if(!specialCmd){
             message* newM = newMessage(buffer, room, userName, newsockfd);
             addNewMessage(messageList, newM);
@@ -200,48 +188,7 @@ void *newClientConnection (void *arg){
         }
 
         bzero(buffer, 256); //eliminates any vestigious in buffer to receive next message
-/*		
-        if(create){
-            n = read(newsockfd, buffer, 256);
-            if(n < 0) printf("ERROR reading from socket");
 
-            for(i=0; i<strlen(buffer); i++)
-                if(buffer[i] == '\n')
-                    buffer[i] = '\0';
-
-            //test = createRoom(buffer, newMessageList(), root);
-            //message* newM = newMessage(buffer, myRoom->name, userName, newsockfd);
-            //addNewMessage(myRoom->ml, newM);
-            //myRoom = test;
-
-            printf("\ncriou: %s.\n", buffer);
-
-            create = 0;
-        }
-/*
-        if(join){
-            n = read(newsockfd, buffer, 256);
-            if(n < 0) printf("ERROR reading from socket");
-
-            for(i=0; i<strlen(buffer); i++)
-                if(buffer[i] == '\n')
-                    buffer[i] = '\0';
-
-            //message* newM = newMessage(buffer, myRoom->name, userName, newsockfd);
-            //addNewMessage(myRoom->ml, newM);
-
-            printf("\nvai procurar: %s.\n", buffer);
-            test = getRoomByName(buffer, root);
-            if(test != NULL){
-                printf("\nachou!!! %s.\n", test->name);
-                myRoom = test;
-            }
-
-            join = 0;
-        }
-*/
-        bzero(buffer, 256); //eliminates any vestigious in buffer to receive next message
-        
 	}
 	if (write(newsockfd, "/disconnect\n", strlen("/disconnect\n")) < 0)
 		printf("Error disconnecting client");

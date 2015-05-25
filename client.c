@@ -81,7 +81,7 @@ void *sendMessages(void *arg){
     bzero(buffer, 256);
     fgets(buffer, 256, stdin);
     n = write(sockfd, buffer, strlen(buffer));
-    
+
 
  	while (!logout)
 	{
@@ -102,12 +102,12 @@ void *sendMessages(void *arg){
             n = write(sockfd, buffer, strlen(buffer));
             if (n < 0) printf("ERROR writing to socket\n");
         } else if (strcmp(buffer, "/join\n") == 0){
-       		printf("[Join]: ");
+       		printf("[Join ROOM]: ");
             bzero(buffer, 256);
             fgets(buffer, 256, stdin);
 
             n = write(sockfd, buffer, strlen(buffer));
-            if (n < 0) printf("ERROR writing to socket\n");        
+            if (n < 0) printf("ERROR writing to socket\n");
         }
 
         bzero(buffer, 256);
