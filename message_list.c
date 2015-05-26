@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Allocates and initializes a new message list */
 message_list* newMessageList()
 {
 	message_list* ml = (message_list*) malloc (sizeof(message_list));
@@ -10,6 +11,7 @@ message_list* newMessageList()
 	return ml;
 }
 
+/* Allocates and initializes a new message */
 message* newMessage(char *_text, char *_room, char *_username, int _id)
 {
 	message* m = (message*) malloc(sizeof(message));
@@ -20,22 +22,26 @@ message* newMessage(char *_text, char *_room, char *_username, int _id)
 	return m;
 }
 
+/* Adds a given message m to a message_list ml*/
 void addNewMessage (message_list* ml, message* m)
 {
-	if (ml->start == NULL){
+	if (ml->start == NULL)
+	{
 		ml->start = m;
 		ml->end = m;
 	}
-	else{
+	else
+	{
 		ml->end->next = m;
 		ml->end = m;
 	}
 }
 
+/* Debugging function */
 void printMessages (message_list *ml)
 {
 	message *m = ml->start;
-	do{
+	do {
 		printf ("-> %s", m->text);
 		m = m->next;
 	}while(m != NULL);

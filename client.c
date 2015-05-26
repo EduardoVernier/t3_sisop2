@@ -9,16 +9,15 @@
 #include <pthread.h>
 
 int sockfd;
+int port;
+struct hostent *server;
 pthread_t receiver;
 pthread_t sender;
+char serverName[100];
 
 int connectToServer(int argc, char *argv[]);
 void *sendMessages(void *arg);
 void *receiveMessages(void *arg);
-
-struct hostent *server;
-int port;
-char serverName[100];
 
 int main(int argc, char *argv[]){
 	if(connectToServer(argc, argv) == 1) return 0;
@@ -38,8 +37,8 @@ int connectToServer(int argc, char *argv[]){
 		fprintf(stderr,"usage %s hostname #port\n", argv[0]);
 		return(1);
 	}
+	
 	struct sockaddr_in serv_addr;
-
 	port = atoi(argv[2]);
 	server = gethostbyname(argv[1]);
 
@@ -74,14 +73,14 @@ void *sendMessages(void *arg){
  	char buffer[256];
 
     system("clear");
-
+	
+	/* Starts connection by identifying client name */
     n = write(sockfd, "/name\n", strlen("/name\n"));
     if (n < 0) printf("ERROR writing to socket\n");
     printf("[New NAME]: ");
     bzero(buffer, 256);
     fgets(buffer, 256, stdin);
     n = write(sockfd, buffer, strlen(buffer));
-
 
  	while (!logout)
 	{
@@ -94,14 +93,17 @@ void *sendMessages(void *arg){
 
         if(strcmp(buffer, "/logout\n") == 0)
             logout = 1;
-        else if(strcmp(buffer, "/name\n") == 0){
+        else if(strcmp(buffer, "/name\n") == 0)
+        {
         	printf("[New NAME]: ");
             bzero(buffer, 256);
             fgets(buffer, 256, stdin);
 
             n = write(sockfd, buffer, strlen(buffer));
             if (n < 0) printf("ERROR writing to socket\n");
-        } else if (strcmp(buffer, "/join\n") == 0){
+        }
+        else if (strcmp(buffer, "/join\n") == 0)
+        {
        		printf("[Join ROOM]: ");
             bzero(buffer, 256);
             fgets(buffer, 256, stdin);
@@ -111,7 +113,6 @@ void *sendMessages(void *arg){
         }
 
         bzero(buffer, 256);
-
         system("clear");
 	}
 	pthread_exit(0);

@@ -10,21 +10,20 @@
 #include "message_list.c"
 #include "client_list.c"
 
-#define KWHT  "\x1B[37m"
-
 #define MAX_CONNECTIONS 10
 
 int sockfd, newsockfd;
-message_list* messageList = NULL;
-client_list* clientList = NULL;
-
-//room* root = NULL;
+message_list* messageList;
+client_list* clientList;
 sem_t semaphore;
 
 void *newClientConnection (void *arg);
 int setUpSocket(int argc, char *argv[]);
 void *newMessageDeliverer(void *arg);
+char* colorByName(char firstLetter);
 
+/* Terminal colors related defines */
+#define KWHT  "\x1B[37m"
 #define KNRM  "\x1B[0m"
 #define KRED  "\x1B[31m"
 #define KGRN  "\x1B[32m"
@@ -35,26 +34,8 @@ void *newMessageDeliverer(void *arg);
 #define KWHT  "\x1B[37m"
 #define RESET "\033[0m"
 
-char* colorByName(char firstLetter){
-    firstLetter = toupper(firstLetter);
-    if(firstLetter >= 'A' && firstLetter <= 'D'){
-        return KRED;
-    }else if(firstLetter >= 'E' && firstLetter <= 'H'){
-        return KGRN;
-    }else if(firstLetter >= 'I' && firstLetter <= 'L'){
-        return KBLU;
-    }else if(firstLetter >= 'M' && firstLetter <= 'P'){
-        return KYEL;
-    }else if(firstLetter >= 'Q' && firstLetter <= 'T'){
-        return KMAG;
-    }else if(firstLetter >= 'U' && firstLetter <= 'Z'){
-        return KCYN;
-    }else{
-        return RESET;
-    }
-}
-
-int main(int argc, char *argv[]){
+int main(int argc, char *argv[])
+{
 	setUpSocket(argc, argv);
 	struct sockaddr_in cli_addr;
 
@@ -65,17 +46,16 @@ int main(int argc, char *argv[]){
 
 	socklen_t clilen;
 	clilen = sizeof(struct sockaddr_in);
-	while(1)
+	while(1) // TODO: 
 	{
         int *newSock = malloc(sizeof(int));
-
         *newSock = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 		puts("Connection accepted");
-
+		
+		/* Launch a new thread for a new client with it's data socket as argument */
         pthread_t *newClientThread = malloc(sizeof(pthread_t));
-
 		if(pthread_create(newClientThread, NULL, newClientConnection, (void*)newSock) < 0){
-            perror("could not create thread for client");
+            perror("Could not create thread for client");
             return 1;
         }
 	}
@@ -85,7 +65,9 @@ int main(int argc, char *argv[]){
 	return 0;
 }
 
-int setUpSocket(int argc, char *argv[]){
+/* Sets up server socket */
+int setUpSocket(int argc, char *argv[])
+{
 	struct sockaddr_in serv_addr;
 	int port;
 
@@ -109,35 +91,16 @@ int setUpSocket(int argc, char *argv[]){
 	}
 
 	listen(sockfd, MAX_CONNECTIONS);
-
 	return 0;
 }
 
-void sendMessage(client_list *cl, message* m)
+/* Handles all actions regarding a client */
+void *newClientConnection (void *arg)
 {
-	client *c = cl->start;
-	while(1)
-	{
-		if (c == NULL) break;
-		if (strcmp(c->room, m->room)==0)
-		{
-			char msgToDeliver[256];
-			char msgColor[3];
-			strcpy(msgColor, colorByName(m->username[0]));
-			sprintf(msgToDeliver, KWHT "#%-10s %s@%-10s" KWHT " : %s%s",
-                    m->room, msgColor, m->username, msgColor, m->text);
-			write(c->sock, msgToDeliver, strlen(msgToDeliver));
-		}
-		if (c->next == NULL) break;
-		c = c->next;
-	}
-}
-
-void *newClientConnection (void *arg){
-    char userName[256];
-    char room[256] = "Global";
-    strcpy(userName, "user");
 	int newsockfd = *(int*) arg;
+    char userName[256];
+    char room[256] = "Global"; // Starts in Global room
+    strcpy(userName, "user");
 
 	char buffer[256];
 	bzero(buffer, 256);
@@ -151,22 +114,23 @@ void *newClientConnection (void *arg){
 		n = read(newsockfd, buffer, 256);
 		if(n < 0) printf("ERROR reading from socket");
 
-        //special commands
-        if(strcmp(buffer, "/logout\n") == 0){
+        /* Special commands */
+        if(strcmp(buffer, "/logout\n") == 0)
             logout = 1;
-        }
-        else if(strcmp(buffer, "/join\n") == 0){
+        else if(strcmp(buffer, "/join\n") == 0) // If a client wants to join a room
+        {
             n = read(newsockfd, buffer, 256);
             if(n < 0) printf("ERROR reading from socket");
             for(i=0; i<strlen(buffer); i++)
                 if(buffer[i] == '\n')
                     buffer[i] = '\0';
-            strcpy(room, buffer);
-            setRoom(clientList, userName, room);
+            strcpy(room, buffer); 
+            setRoom(clientList, userName, room); 
             bzero(buffer, 256);
             specialCmd = 1;
         }
-        else if(strcmp(buffer, "/name\n") == 0){
+        else if(strcmp(buffer, "/name\n") == 0)
+        {
             n = read(newsockfd, buffer, 256);
             if(n < 0) printf("ERROR reading from socket");
 
@@ -187,11 +151,53 @@ void *newClientConnection (void *arg){
             sendMessage(clientList, newM);
         }
 
-        bzero(buffer, 256); //eliminates any vestigious in buffer to receive next message
+        bzero(buffer, 256); // Eliminates any vestigious in buffer to receive next message
 
 	}
 	if (write(newsockfd, "/disconnect\n", strlen("/disconnect\n")) < 0)
 		printf("Error disconnecting client");
 
     pthread_exit(0);
+}
+
+/* Sends message to all clients in the same room */
+void sendMessage(client_list *cl, message* m)
+{
+	client *c = cl->start;
+	while(1)
+	{
+		if (c == NULL) break;
+		if (strcmp(c->room, m->room)==0)
+		{
+			char msgToDeliver[256];
+			char msgColor[3];
+			strcpy(msgColor, colorByName(m->username[0]));
+			sprintf(msgToDeliver, KWHT "#%-10s %s@%-10s" KWHT " : %s%s",
+                    m->room, msgColor, m->username, msgColor, m->text);
+			write(c->sock, msgToDeliver, strlen(msgToDeliver));
+		}
+		if (c->next == NULL) break;
+		c = c->next;
+	}
+}
+
+/* Chooses user color in terminal */
+char* colorByName(char firstLetter)
+{
+    firstLetter = toupper(firstLetter);
+    if(firstLetter >= 'A' && firstLetter <= 'D'){
+        return KRED;
+    }else if(firstLetter >= 'E' && firstLetter <= 'H'){
+        return KGRN;
+    }else if(firstLetter >= 'I' && firstLetter <= 'L'){
+        return KBLU;
+    }else if(firstLetter >= 'M' && firstLetter <= 'P'){
+        return KYEL;
+    }else if(firstLetter >= 'Q' && firstLetter <= 'T'){
+        return KMAG;
+    }else if(firstLetter >= 'U' && firstLetter <= 'Z'){
+        return KCYN;
+    }else{
+        return RESET;
+    }
 }
