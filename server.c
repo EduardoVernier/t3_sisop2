@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
 
 	socklen_t clilen;
 	clilen = sizeof(struct sockaddr_in);
-	while(1) // TODO: 
+	while(1) 
 	{
         int *newSock = malloc(sizeof(int));
         *newSock = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
@@ -158,6 +158,7 @@ void *newClientConnection (void *arg)
 	}
 	if (write(newsockfd, "/disconnect\n", strlen("/disconnect\n")) < 0)
 		printf("Error disconnecting client");
+    clientLogout(clientList, userName);
 
     pthread_exit(0);
 }
@@ -169,7 +170,7 @@ void sendMessage(client_list *cl, message* m)
 	while(1)
 	{
 		if (c == NULL) break;
-		if (strcmp(c->room, m->room)==0)
+		if (strcmp(c->room, m->room)==0 && c->online==1)
 		{
 			char msgToDeliver[256];
 			char msgColor[3];

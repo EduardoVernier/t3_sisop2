@@ -18,6 +18,7 @@ client* newClient(char *_username, int sock, char* _room)
 	c->username = strdup(_username);
 	c->sock = sock;
 	c->room = strdup(_room);
+	c->online = 1;
 	return c;
 }
 
@@ -46,6 +47,21 @@ void setRoom(client_list *cl, char *_username, char *_room)
 		if (c == NULL) break;
 		if (strcmp (c->username, _username) == 0) // Found client
 			strcpy(c->room, _room);
+		if (c->next == NULL) break;
+		c = c->next;
+	}
+}
+
+
+void clientLogout(client_list *cl, char *_username)
+{
+	client *c = cl->start;
+	/* Client has to be found in the client_list cl */
+	while (1)
+	{
+		if (c == NULL) break;
+		if (strcmp (c->username, _username) == 0) // Found client
+			c->online = 0;
 		if (c->next == NULL) break;
 		c = c->next;
 	}

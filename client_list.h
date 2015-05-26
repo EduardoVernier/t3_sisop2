@@ -5,6 +5,7 @@ typedef struct client_el {
 	int sock;
 	char *username;
 	char *room;
+	int online;
 	struct client_el *next;	
 } client;
 
@@ -17,5 +18,5 @@ client_list* newClientList ();
 client* newClient(char *_user, int sock, char* _room);
 void addNewClient(client_list *cl, client *c);
 void setRoom(client_list *cl, char *_username, char *_room);
-
+void clientLogout(client_list *cl, char *_username);
 #endif
