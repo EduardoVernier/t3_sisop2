@@ -6,20 +6,20 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <pthread.h>
-#include <semaphore.h>
 #include "message_list.c"
 #include "client_list.c"
 
 #define MAX_CONNECTIONS 10
 
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 int sockfd, newsockfd;
 message_list* messageList;
 client_list* clientList;
-sem_t semaphore;
 
+	
 void *newClientConnection (void *arg);
 int setUpSocket(int argc, char *argv[]);
-void *newMessageDeliverer(void *arg);
+void sendMessage(client_list *cl, message* m);
 char* colorByName(char firstLetter);
 
 /* Terminal colors related defines */
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 	messageList = newMessageList();
 	clientList = newClientList();
 
-    sem_init(&semaphore, 0, 1);
+
 
 	socklen_t clilen;
 	clilen = sizeof(struct sockaddr_in);
@@ -146,9 +146,11 @@ void *newClientConnection (void *arg)
 
         printf(" -> %s: %s ", userName, buffer);
         if(!specialCmd){
-            message* newM = newMessage(buffer, room, userName, newsockfd);
-            addNewMessage(messageList, newM);
-            sendMessage(clientList, newM);
+            pthread_mutex_lock(&mutex);
+		        message* newM = newMessage(buffer, room, userName, newsockfd);
+		        addNewMessage(messageList, newM);
+		        sendMessage(clientList, newM);
+            pthread_mutex_unlock(&mutex);        
         }
 
         bzero(buffer, 256); // Eliminates any vestigious in buffer to receive next message
